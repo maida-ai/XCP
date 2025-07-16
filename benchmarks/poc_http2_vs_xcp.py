@@ -407,7 +407,7 @@ def print_validation_summary(http_results: Dict, xcp_results: Dict):
 def main():
     ap = argparse.ArgumentParser(description="HTTP/2 vs XCP benchmark with validation and cache-busting")
     ap.add_argument("--runs", type=int, default=500, help="Number of round trips")
-    ap.add_argument("--size", type=int, default=8192, help="Payload size in bytes")
+    ap.add_argument("--size", type=int, default=10240, help="Payload size in bytes")
     ap.add_argument("--validate-only", action="store_true", help="Run validation tests only (smaller payload)")
     args = ap.parse_args()
 

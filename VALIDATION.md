@@ -65,7 +65,7 @@ XCP:    500/500 successful (100.0%)
 When errors occur, the benchmark provides detailed information:
 
 ```
-❌ Run 42: Length mismatch! Expected 8192, got 4096
+❌ Run 42: Length mismatch! Expected 10240, got 4096
 ❌ Run 156: Checksum mismatch!
    Expected: a1b2c3d4e5f6...
    Got:     9f8e7d6c5b4a...
@@ -137,7 +137,7 @@ If validation errors are detected, warnings are displayed:
 
 ### **Basic Benchmark with Validation**
 ```bash
-python benchmarks/poc_http2_vs_xcp.py --runs 1000 --size 8192
+python benchmarks/poc_http2_vs_xcp.py --runs 1000 --size 10240
 ```
 
 ### **Small Validation Test**
@@ -176,7 +176,7 @@ python test_validation.py
 
 ### **Length Mismatches**
 ```
-❌ Run 42: Length mismatch! Expected 8192, got 4096
+❌ Run 42: Length mismatch! Expected 10240, got 4096
 ```
 **Causes**: Frame truncation, buffer overflow, protocol bugs
 

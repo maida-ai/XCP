@@ -193,7 +193,7 @@ The implementation includes a benchmark script that compares XCP performance aga
 pip install -r requirements.txt
 
 # Run benchmark
-python benchmarks/poc_http2_vs_xcp.py --runs 1000 --size 8192
+python benchmarks/poc_http2_vs_xcp.py --runs 1000 --size 10240
 ```
 
 ## Testing

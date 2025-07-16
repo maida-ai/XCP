@@ -59,21 +59,27 @@ xcp/
 ## Getting started
 
 1. Clone the repo and install deps: `pip install -r benchmarks/requirements.txt`.
-2. Run the demo: `python benchmarks/poc_http2_vs_xcp.py` -> see throughput table.
-3. Read the latest spec draft in [`revisions/`](revisions/).
+2. Run the demo: `PYTHONPATH=. python benchmarks/poc_http2_vs_xcp.py` -> see throughput table.
+3. Run the multi-codec benchmark: `PYTHONPATH=. python benchmarks/poc_http2_vs_xcp_multi.py` -> compare HTTP+JSON, HTTP+F16, XCP+JSON, XCP+F16.
+4. Read the latest spec draft in [`revisions/`](revisions/).
 
 
 ## Benchmarks (placeholder)
 
-| Payload         | HTTP/JSON | XCP-JSON | XCP-F16   | Gain     |
-| --------------- | --------- | -------- | --------- | -------- |
-| 10 KB embedding | 120 us    | 98 us    | **58 us** | **2.1x** |
-| *Add yours...*  |           |          |           |          |
+
+|Transport + Codec | p50 (us, ↓) | p95 (us, ↓) | p99 (us, ↓) | Throughput (MiB/s, ↑) |
+|------------------|------------ |-------------|-------------| ----------------------|
+|XCP + JSON        | 66.18       | 74.50       | 78.09       | **97.2**              |
+|HTTP/2 + JSON     | 334.58      | 335.87      | 337.63      | 23.8                  |
+|XCP + F16         | 47.35       | 82.61       | 86.42       | **107.1**             |
+|HTTP/2 + F16      | 323.41      | 323.74      | 324.42      | 27.6                  |
+
 
 
 ## Contributing
 
-Pull requests welcome!  Open a discussion or issue first if you plan large changes.  Higher-layer protocol adapters (MCP/A2A/ACP) and additional codecs are especially appreciated.
+Pull requests welcome!  Open a discussion or issue first if you plan large changes.
+Higher-layer protocol adapters (MCP/A2A/ACP) and additional codecs are especially appreciated.
 
 
 ## License
