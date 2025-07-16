@@ -15,6 +15,19 @@ The implementation provides:
 
 ## Architecture
 
+The XCP package is organized into logical modules for better maintainability:
+
+```
+xcp/
+├── __init__.py          # Public API exports
+├── constants.py         # Protocol constants and enums
+├── frames.py           # Frame structures and serialization
+├── client.py           # Client implementation
+├── server.py           # Server implementation
+├── legacy.py           # Backward compatibility API
+└── demo.py             # Demo functionality
+```
+
 ### Frame Structure
 
 The implementation follows the XCP v0.1 frame format:

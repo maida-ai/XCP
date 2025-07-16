@@ -4,7 +4,10 @@
 import threading
 import time
 import json
-from xcp import Server, Client, Frame, FrameHeader, MsgType, CodecID
+from xcp.server import Server
+from xcp.client import Client
+from xcp.frames import Frame, FrameHeader
+from xcp.constants import MsgType, CodecID
 
 def demo_server():
     """Run a simple XCP server that echoes messages."""

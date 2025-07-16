@@ -4,7 +4,10 @@
 import threading
 import time
 import json
-from . import Server, Client, Frame, FrameHeader, MsgType, CodecID
+from .server import Server
+from .client import Client
+from .frames import Frame, FrameHeader
+from .constants import MsgType, CodecID
 
 def run_demo():
     """Run a complete XCP demo."""
