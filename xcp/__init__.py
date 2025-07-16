@@ -1,3 +1,5 @@
+# Copyright 2025 Maida.AI
+# SPDX-License-Identifier: Apache-2.0
 r"""XCP (eXtensible Coordination Protocol) - A binary-first communication protocol for AI agents.
 
 This package provides a minimal proof-of-concept implementation of the XCP v0.1 specification

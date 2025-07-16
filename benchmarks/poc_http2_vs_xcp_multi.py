@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2025 Maida.AI
+# SPDX-License-Identifier: Apache-2.0
 """
 Multi-Codec Benchmark: HTTP/2 JSON vs HTTP/2 F16 vs XCP JSON vs XCP F16
 

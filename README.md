@@ -1,3 +1,7 @@
+<!---
+Copyright © 2025 Maida.AI contributors.
+Licensed under CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/
+-->
 # XCP -- eXtensible Coordination Protocol
 
 > **Layer-to-4 transport substrate for AI agents and tools**
@@ -64,7 +68,7 @@ xcp/
 4. Read the latest spec draft in [`revisions/`](revisions/).
 
 
-## Benchmarks (placeholder)
+## Benchmarks
 
 
 |Transport + Codec | p50 (us, ↓) | p95 (us, ↓) | p99 (us, ↓) | Throughput (MiB/s, ↑) |

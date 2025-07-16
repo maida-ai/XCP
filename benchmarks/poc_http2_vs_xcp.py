@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2025 Maida.AI
+# SPDX-License-Identifier: Apache-2.0
 """Proof-of-concept benchmark: HTTP/2 JSON chat vs XCP binary frames.
 
 This script measures **throughput (MiB/s)** and **p99 latency (ms)** for

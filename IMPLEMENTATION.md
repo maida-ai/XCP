@@ -1,3 +1,7 @@
+<!---
+Copyright © 2025 Maida.AI contributors.
+Licensed under CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/
+-->
 # XCP Implementation
 
 This directory contains a minimal proof-of-concept implementation of the **XCP (eXtensible Coordination Protocol)** as specified in `revisions/xcp-v0.1.md`.
