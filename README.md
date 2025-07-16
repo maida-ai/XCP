@@ -4,7 +4,9 @@ Licensed under CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/
 -->
 # XCP -- eXtensible Coordination Protocol
 
-> **Layer-to-4 transport substrate for AI agents and tools**
+> [!INFO]
+> **Layer-0-to-4 transport substrate for AI agents and tools**
+>
 > Part of the **Maida.AI** project
 
 ## Revision List
@@ -16,7 +18,9 @@ Licensed under CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/
 
 ## Why does XCP exist?
 
-Modern agent protocols (MCP, ACP, A2A) focus on *what* agents say -- tasks, tool calls, agent cards -- but assume a human-oriented JSON/HTTP substrate. As payloads grow (embeddings, multimodal tensors) that substrate becomes a bottleneck. **XCP standardises *how* agents talk below the JSON layer**, offering binary framing, codec negotiation, flow-control and built-in semantic clarification without redefining higher-level semantics.
+Modern agent protocols (MCP, ACP, A2A) focus on *what* agents say -- tasks, tool calls, agent cards -- but assume a human-oriented JSON/HTTP substrate.
+As payloads grow (embeddings, multimodal tensors) that substrate becomes a bottleneck.
+**XCP standardises *how* agents talk below the JSON layer**, offering binary framing, codec negotiation, flow-control and built-in semantic clarification without redefining higher-level semantics.
 
 | Stack slice                   | MCP                  | ACP                 | A2A                      | **XCP**                                                                     |
 | ----------------------------- | -------------------- | ------------------- | ------------------------ | --------------------------------------------------------------------------- |
@@ -45,6 +49,7 @@ Modern agent protocols (MCP, ACP, A2A) focus on *what* agents say -- tasks, tool
 | **ACP gateway**               | REST endpoint auto-converts to XCP when both peers support it; negotiates best `bodyCodec`.                 |
 | **MCP tool calls inside XCP** | Carry MCP JSON in a single `DATA` frame; large tool outputs arrive as compressed binary instead of base-64. |
 
+> [!NOTE]
 > **Non-goals:** XCP will never define tasks, tools, or agent roles -- it is purely a transport & representation layer.
 
 
