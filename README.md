@@ -3,10 +3,8 @@ Copyright © 2025 Maida.AI contributors.
 Licensed under CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/
 -->
 # XCP -- eXtensible Coordination Protocol
-
+**Layer-0-to-4 transport substrate for AI agents and tools**
 > [!NOTE]
-> **Layer-0-to-4 transport substrate for AI agents and tools**
->
 > Part of the **Maida.AI** project
 
 ## Revision List
