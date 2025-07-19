@@ -4,7 +4,7 @@ Licensed under CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/
 -->
 # XCP -- eXtensible Coordination Protocol
 
-> [!INFO]
+> [!NOTE]
 > **Layer-0-to-4 transport substrate for AI agents and tools**
 >
 > Part of the **Maida.AI** project
