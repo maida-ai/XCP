@@ -272,8 +272,8 @@ def print_validation_summary(results: Dict[str, Dict]):
 # ---------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(description="HTTP/2 vs XCP multi-codec benchmark with validation and cache-busting")
-    ap.add_argument("--runs", type=int, default=500, help="Number of round trips")
-    ap.add_argument("--size", type=int, default=10240, help="Payload size in bytes")
+    ap.add_argument("--runs", type=int, default=1000, help="Number of round trips")
+    ap.add_argument("--size", type=int, default=16384, help="Payload size in bytes")
     args = ap.parse_args()
     time_units = "us"
 

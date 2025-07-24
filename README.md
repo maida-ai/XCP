@@ -73,7 +73,7 @@ xcp/
 
 ## Benchmarks
 
-**Raw**
+**Raw (`packet-size = 16384`)**
 
 |Transport + Codec | p50 (us, ↓) | p95 (us, ↓) | p99 (us, ↓) | Throughput (MiB/s, ↑) |
 |------------------|------------ |-------------|-------------| ----------------------|

@@ -30,6 +30,7 @@ from rich.table import Table
 from tqdm import tqdm
 
 from benchmarks import echo_bench_pb2
+import numpy as np
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -47,6 +48,12 @@ def generate_unique_payload_with_checksum(size: int, run_id: str) -> Tuple[bytes
     # Also generate a float array for the repeated float field
     floats = [float(b) for b in unique_payload[:min(128, len(unique_payload))]]
     return unique_payload, checksum, floats
+
+def generate_f16_payload(size: int) -> Tuple[bytes, str]:
+    arr = np.random.rand(size // 2).astype(np.float16)  # float16 = 2 bytes
+    payload = arr.tobytes()
+    checksum = hashlib.sha256(payload).hexdigest()
+    return payload, checksum
 
 def validate_response(original_payload: bytes, response_payload: bytes, original_checksum: str, run_number: int) -> bool:
     if len(response_payload) != len(original_payload):
@@ -238,7 +245,7 @@ def recv_exact(sock, n):
         buf += chunk
     return buf
 
-def bench_xcp(host: str, port: int, payload: bytes, payload_checksum: str, runs: int) -> Dict:
+def bench_xcp(host: str, port: int, payload: bytes, payload_checksum: str, runs: int, codec: int = 0x01) -> Dict:
     if Frame is None:
         raise RuntimeError("xcp reference library missing. Cannot benchmark XCP.")
     from xcp import Client
@@ -246,14 +253,14 @@ def bench_xcp(host: str, port: int, payload: bytes, payload_checksum: str, runs:
     validation_errors = 0
     client = Client(host, port, enable_cache_busting=True)
     try:
-        for run_num in tqdm(range(runs), desc="XCP"):
+        for run_num in tqdm(range(runs), desc=f"XCP{' + F16' if codec == 0x03 else ''}"):
             start = time.perf_counter()
             try:
                 frame = Frame(
                     header=FrameHeader(
                         channelId=run_num,
                         msgType=0x20,
-                        bodyCodec=0x01,
+                        bodyCodec=codec,
                         schemaId=run_num,
                         msgId=run_num,
                     ),
@@ -343,19 +350,21 @@ def print_validation_summary(results: Dict[str, Dict]):
 # ---------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(description="XCP vs Protobuf benchmark with validation and cache-busting")
-    ap.add_argument("--runs", type=int, default=500, help="Number of round trips")
-    ap.add_argument("--size", type=int, default=10240, help="Payload size in bytes")
+    ap.add_argument("--runs", type=int, default=1000, help="Number of round trips")
+    ap.add_argument("--size", type=int, default=16384, help="Payload size in bytes")
     args = ap.parse_args()
     time_units = "us"
 
     # Generate unique payload with checksum for validation (no caching)
     unique_run_id = str(uuid.uuid4())
     payload, payload_checksum, floats = generate_unique_payload_with_checksum(args.size, unique_run_id)
+    f16_payload, f16_checksum = generate_f16_payload(args.size)
 
     print(f"Benchmark Configuration:")
     print(f"  Runs: {args.runs}")
     print(f"  Payload size: {args.size} bytes")
     print(f"  Payload checksum: {payload_checksum[:16]}...")
+    print(f"  F16 checksum: {f16_checksum[:16]}...")
     print(f"  Run ID: {unique_run_id[:8]}...")
     print(f"  Cache-busting: Enabled")
     print()
@@ -377,7 +386,8 @@ def main():
     # Run benchmarks
     print("Running benchmarks with validation and cache-busting...")
     results = {}
-    results["XCP"] = summarise(**bench_xcp("127.0.0.1", xcp_port, payload, payload_checksum, args.runs), size_bytes=args.size, unit=time_units)
+    results["XCP"] = summarise(**bench_xcp("127.0.0.1", xcp_port, payload, payload_checksum, args.runs, codec=0x01), size_bytes=args.size, unit=time_units)
+    results["XCP + F16"] = summarise(**bench_xcp("127.0.0.1", xcp_port, f16_payload, f16_checksum, args.runs, codec=0x03), size_bytes=args.size, unit=time_units)
     results["Protobuf TCP"] = summarise(**bench_protobuf_tcp("127.0.0.1", pb_tcp_port, payload, payload_checksum, args.runs), size_bytes=args.size, unit=time_units)
     results["Protobuf HTTP/2"] = summarise(**bench_protobuf_http2(pb_http_url, payload, payload_checksum, args.runs), size_bytes=args.size, unit=time_units)
 
