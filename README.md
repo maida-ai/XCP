@@ -76,12 +76,37 @@ xcp/
 
 |Transport + Codec | p50 (us, ↓) | p95 (us, ↓) | p99 (us, ↓) | Throughput (MiB/s, ↑) |
 |------------------|------------ |-------------|-------------| ----------------------|
-|XCP + JSON        | 66.18       | 74.50       | 78.09       | **97.2**              |
-|HTTP/2 + JSON     | 334.58      | 335.87      | 337.63      | 23.8                  |
-|XCP + F16         | 47.35       | 82.61       | 86.42       | **107.1**             |
-|HTTP/2 + F16      | 323.41      | 323.74      | 324.42      | 27.6                  |
+| XCP + JSON       | 66.18       | 74.50       | 78.09       | **97.2**              |
+| HTTP/2 + JSON    | 334.58      | 335.87      | 337.63      | 23.8                  |
+| Protobuf HTTP/2  | 315.70      | 317.27      | 319.55      | 43.2                  |
+| ---------------  | ----------- | ----------- | ----------- | --------------------- |
+| XCP + F16        | 47.35       | 82.61       | 86.42       | 107.1                 |
+| HTTP/2 + F16     | 323.41      | 323.74      | 324.42      | 27.6                  |
+| Protobuf TCP     | 27.81       | 31.70       | 33.19       | **180.9**             |
 
 
+> [!NOTE]
+> The `Protobuf` over `TCP` is faster.
+> Compiled XCP with non-JSON headers is the next optimization
+
+
+## Known Limitations and Optimizations
+
+### Why might Protobuf over TCP be faster than XCP?
+
+- **Serialization/Deserialization Overhead:** Protobuf uses highly optimized binary serialization (with C++ extensions in Python), while XCP uses JSON for headers, which is slower to encode/decode in Python.
+- **Implementation Language:** Protobuf's core is implemented in C++ (even when used from Python), making it much faster than pure Python code. XCP is currently implemented in pure Python.
+- **Frame Structure and Overhead:** XCP frames include a JSON-encoded header, adding both size and parsing overhead. Protobuf messages are compact and binary.
+- **Message Size:** Protobuf messages are typically smaller than equivalent JSON or JSON+binary hybrid messages, reducing transmission and parsing time.
+- **Socket Handling:** Both use TCP, but extra work in XCP (e.g., more complex framing, thread contention) can add overhead.
+- **Python GIL and Threading:** XCP's use of threads and Python-level work can be bottlenecked by the Global Interpreter Lock (GIL), especially under high concurrency.
+
+### Potential Optimizations for XCP
+
+- Use a binary format for headers (e.g., struct, msgpack, or Protobuf for headers) instead of JSON.
+- Implement performance-critical parts in C, Cython, or Rust to reduce Python overhead.
+- Reduce per-message overhead by avoiding JSON for every frame.
+- Profile and optimize socket handling and threading to minimize bottlenecks.
 
 ## Contributing
 
