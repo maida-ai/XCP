@@ -47,6 +47,7 @@ setup(
             "tqdm>=4.64.0",
             "numpy>=1.21.0",
             "rich>=12.0.0",
+            "protobuf>=5.26.1",
         ],
     },
     entry_points={

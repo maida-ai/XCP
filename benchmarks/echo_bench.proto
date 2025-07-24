@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package benchmarks;
+
+// Simple payload for benchmarking: can be bytes or repeated float.
+message EchoPayload {
+  bytes data = 1;
+  repeated float floats = 2;
+}
