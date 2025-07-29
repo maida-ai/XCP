@@ -1,0 +1,65 @@
+[project]
+name = "xcp"
+description = "eXtensible Coordination Protocol - A binary-first communication protocol for AI agents"
+requires-python = ">=3.11"
+authors = [
+    {name = "Maida.AI"}
+]
+dynamic = [
+    "version",
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.setuptools.dynamic]
+version = {file=["version"]}
+
+[tool.poetry]
+package-mode = false
+version = "0.0.0"
+
+[tool.poetry.dependencies]
+# httpx = "^0.28.1"
+
+[tool.poetry.group.dev.dependencies]
+# Testing
+pytest = "^8.4.1"
+pytest-asyncio = "^1.1.0"
+pytest-cov = "^6.2.1"
+pytest-mock = "^3.14.1"
+black = "^25.1.0"
+ruff = "^0.12.7"
+mypy = "^1.17.0"
+pre-commit = "^4.2.0"
+
+[tool.poetry.group.benchmark.dependencies]
+httpx = "^0.28.1"
+h2 = "^4.2.0"
+tqdm = "^4.67.1"
+numpy = "^2.3.1"
+rich = "^14.0.0"
+protobuf = "^6.31.1"
+
+
+[project.scripts]
+xcp-demo = "xcp.demo:main"
+
+[tool.black]
+line-length = 120
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
