@@ -44,7 +44,7 @@ Goals:
 | -------------- | ------------------------------------------------------------------------------------- |
 | **Ether**      | Self-describing envelope: `{kind, schema_version, payload, metadata, attachments}`    |
 | **Frame**      | Top-level unit on the wire (header + payload + CRC).                                  |
-| **Channel**    | Independent ordered stream within a connection (maps to QUIC / HTTP² stream).         |
+| **Channel**    | Independent ordered stream within a connection (maps to QUIC / HTTP^2 stream).         |
 | **Codec**      | Concrete serialization of an Ether or control body (JSON, ARROW\_IPC, ...).             |
 | **SchemaKey**  | Composite identifier of a semantic schema: `(namespace, kind, major, minor, hash128)` |
 | **Attachment** | External or inline binary blob referenced from an Ether.                              |
@@ -172,7 +172,7 @@ A fixed 32-byte header precedes the raw bytes:
 | 1   | 1   | `dtype` | Enum `F32=0,F16=1,I8=2`            |
 | 2   | 1   | `flags` | Bit0 row-quantised, Bit1 col-major |
 | 3   | 1   | *pad*   | 0                                  |
-| 4   | 4×8 | `shape` | Dims (unused dims = 0)             |
+| 4   | 4x8 | `shape` | Dims (unused dims = 0)             |
 | 28  | 4   | `scale` | Row/global scale (float)           |
 
 ## 6 Semantics (L5)
