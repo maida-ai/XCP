@@ -1,29 +1,37 @@
-"""XCP server implementation."""
-
+# mypy: ignore-errors
+"""XCP v0.2 server implementation."""
 import logging
 import socket
 import threading
-from typing import Callable, Optional
+from collections.abc import Callable
 
-from .constants import MsgType, CodecID
+from .codecs import get_codec, list_codecs
+from .constants import DEFAULT_MAX_FRAME_BYTES, CodecID, ErrorCode, MsgType
+from .ether import Ether
 from .frames import Frame, FrameHeader, pack_frame, parse_frame
+
 
 class _ClientHandler(threading.Thread):
     """Handle a single client connection."""
 
-    def __init__(self, sock: socket.socket, addr, on_frame: Callable[[Frame], Frame]):
+    def __init__(
+        self, sock: socket.socket, addr, on_frame: Callable[[Frame], Frame], on_ether: Callable[[Ether], Ether] = None
+    ):
         """Initialize client handler.
 
         Args:
             sock: Client socket
             addr: Client address
             on_frame: Frame handler callback
+            on_ether: Ether handler callback
         """
         super().__init__(daemon=True)
         self.sock = sock
         self.addr = addr
         self.on_frame = on_frame
+        self.on_ether = on_ether
         self.running = True
+        self._supported_codecs: list[int] = []
 
     def run(self):
         """Handle client connection."""
@@ -38,48 +46,45 @@ class _ClientHandler(threading.Thread):
         """Serve client requests."""
         # Expect HELLO
         frame = parse_frame(self.sock)
-        if frame.header.msgType != MsgType.HELLO:
+        if frame.header.msg_type != MsgType.HELLO:
             return
 
-        # Send CAPS_ACK
-        ack_header = FrameHeader(
-            msgType=MsgType.CAPS_ACK,
-            bodyCodec=CodecID.JSON,
-            inReplyTo=frame.header.msgId
-        )
-        ack_frame = Frame(header=ack_header, payload=b"")
-        self.sock.sendall(pack_frame(ack_frame))
+        # Parse client capabilities
+        json_codec = get_codec(CodecID.JSON)
+        client_capabilities = json_codec.decode(frame.payload)
+
+        # Determine intersection of codecs
+        client_codecs = set(client_capabilities.get("codecs", []))
+        server_codecs = set(list_codecs())
+        self._supported_codecs = list(client_codecs & server_codecs)
+
+        # Send CAPS response
+        caps_data = {
+            "codecs": self._supported_codecs,
+            "max_frame_bytes": DEFAULT_MAX_FRAME_BYTES,
+            "shared_mem": False,  # TODO: implement shared memory
+            "accepts": [],  # Accept all kinds for now
+            "emits": [],  # Emit all kinds for now
+        }
+
+        caps_payload = json_codec.encode(caps_data)
+        caps_header = FrameHeader(msg_type=MsgType.CAPS, body_codec=CodecID.JSON, in_reply_to=frame.header.msg_id)
+        caps_frame = Frame(header=caps_header, payload=caps_payload)
+        self.sock.sendall(pack_frame(caps_frame))
 
         # Handle frames
         while self.running:
             try:
                 frame = parse_frame(self.sock)
-                response = self.on_frame(frame)
+                response = self._handle_frame(frame)
                 if response:
                     self.sock.sendall(pack_frame(response))
-            except (ConnectionError, ValueError):
+            except (ConnectionError, ValueError) as e:
+                logging.debug("Client %s error: %s", self.addr, e)
                 break
 
-class Server:
-    """XCP server that accepts connections and handles frames."""
-
-    def __init__(self, host: str = "127.0.0.1", port: int = 9944,
-                 on_frame: Callable[[Frame], Frame] = None):
-        """Initialize server.
-
-        Args:
-            host: Host to bind to
-            port: Port to bind to
-            on_frame: Optional frame handler callback
-        """
-        self.host = host
-        self.port = port
-        self.on_frame = on_frame or self._default_handler
-        self._sock: Optional[socket.socket] = None
-        self._running = threading.Event()
-
-    def _default_handler(self, frame: Frame) -> Frame:
-        """Default handler that echoes DATA frames.
+    def _handle_frame(self, frame: Frame) -> Frame | None:
+        """Handle a received frame.
 
         Args:
             frame: Received frame
@@ -87,17 +92,117 @@ class Server:
         Returns:
             Response frame or None
         """
-        if frame.header.msgType == MsgType.DATA:
-            # Echo the frame back
+        if frame.header.msg_type == MsgType.DATA:
+            return self._handle_data_frame(frame)
+        elif frame.header.msg_type == MsgType.PING:
+            return self._handle_ping_frame(frame)
+        else:
+            # Let custom handler deal with other frame types
+            return self.on_frame(frame) if self.on_frame else None
+
+    def _handle_data_frame(self, frame: Frame) -> Frame | None:
+        """Handle a DATA frame containing Ether or raw payload."""
+        try:
+            # Check if this is a raw payload (for benchmarking)
+            if frame.header.body_codec in [0x01, 0x08] and len(frame.payload) > 0:
+                # Try to decode as Ether first
+                try:
+                    codec = get_codec(frame.header.body_codec)
+                    ether_data = codec.decode(frame.payload)
+
+                    if isinstance(ether_data, Ether):
+                        # Process Ether through custom handler
+                        if self.on_ether:
+                            response_ether = self.on_ether(ether_data)
+                            if response_ether:
+                                # Encode response using same codec
+                                response_payload = codec.encode(response_ether)
+                                response_header = FrameHeader(
+                                    channel_id=frame.header.channel_id,
+                                    msg_type=MsgType.DATA,
+                                    body_codec=frame.header.body_codec,
+                                    in_reply_to=frame.header.msg_id,
+                                )
+                                return Frame(header=response_header, payload=response_payload)
+                        else:
+                            # Default echo behavior for Ether
+                            response_header = FrameHeader(
+                                channel_id=frame.header.channel_id,
+                                msg_type=MsgType.DATA,
+                                body_codec=frame.header.body_codec,
+                                in_reply_to=frame.header.msg_id,
+                            )
+                            return Frame(header=response_header, payload=frame.payload)
+                except Exception:
+                    # If Ether decoding fails, treat as raw payload
+                    pass
+
+            # Handle as raw payload (for benchmarking)
             response_header = FrameHeader(
-                channelId=frame.header.channelId,
-                msgType=frame.header.msgType,
-                bodyCodec=frame.header.bodyCodec,
-                schemaId=frame.header.schemaId,
-                inReplyTo=frame.header.msgId
+                channel_id=frame.header.channel_id,
+                msg_type=MsgType.DATA,
+                body_codec=frame.header.body_codec,
+                in_reply_to=frame.header.msg_id,
             )
             return Frame(header=response_header, payload=frame.payload)
-        return None
+
+        except Exception as e:
+            logging.error("Error handling DATA frame: %s", e)
+            # Send NACK
+            nack_data = {
+                "msg_id": frame.header.msg_id,
+                "error_code": ErrorCode.ERR_CODEC_UNSUPPORTED,
+                "retry_after_ms": 0,
+            }
+            json_codec = get_codec(CodecID.JSON)
+            nack_payload = json_codec.encode(nack_data)
+            nack_header = FrameHeader(msg_type=MsgType.NACK, body_codec=CodecID.JSON, in_reply_to=frame.header.msg_id)
+            return Frame(header=nack_header, payload=nack_payload)
+
+    def _handle_ping_frame(self, frame: Frame) -> Frame:
+        """Handle a PING frame."""
+        # Echo PING as PONG
+        pong_header = FrameHeader(
+            msg_type=MsgType.PONG, body_codec=frame.header.body_codec, in_reply_to=frame.header.msg_id
+        )
+        return Frame(header=pong_header, payload=frame.payload)
+
+
+class Server:
+    """XCP v0.2 server that accepts connections and handles frames."""
+
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 9944,
+        on_frame: Callable[[Frame], Frame] = None,
+        on_ether: Callable[[Ether], Ether] = None,
+    ):
+        """Initialize server.
+
+        Args:
+            host: Host to bind to
+            port: Port to bind to
+            on_frame: Optional frame handler callback
+            on_ether: Optional Ether handler callback
+        """
+        self.host = host
+        self.port = port
+        self.on_frame = on_frame
+        self.on_ether = on_ether or self._default_ether_handler
+        self._sock: socket.socket | None = None
+        self._running = threading.Event()
+
+    def _default_ether_handler(self, ether: Ether) -> Ether:
+        """Default handler that echoes Ether envelopes.
+
+        Args:
+            ether: Received Ether envelope
+
+        Returns:
+            Echoed Ether envelope
+        """
+        return ether
 
     def serve_forever(self):
         """Start the server and handle connections."""
@@ -108,10 +213,12 @@ class Server:
             self._sock = srv
             self._running.set()
 
+            logging.info("XCP v0.2 server listening on %s:%d", self.host, self.port)
+
             while self._running.is_set():
                 try:
                     cli_sock, addr = srv.accept()
-                    _ClientHandler(cli_sock, addr, self.on_frame).start()
+                    _ClientHandler(cli_sock, addr, self.on_frame, self.on_ether).start()
                 except OSError:
                     break  # socket closed
 

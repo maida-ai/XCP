@@ -1,14 +1,15 @@
+# mypy: ignore-errors
 """Legacy API compatibility module."""
-
 import socket
 import threading
 import time
 from contextlib import contextmanager
 
-from .constants import MsgType, CodecID
-from .frames import Frame, FrameHeader
 from .client import Client
+from .constants import CodecID, MsgType
+from .frames import Frame, FrameHeader
 from .server import Server
+
 
 class XCPConnection:
     """Legacy client connection API for backward compatibility."""
@@ -38,10 +39,7 @@ class XCPConnection:
         else:
             payload_bytes = payload
 
-        header = FrameHeader(
-            msgType=MsgType.DATA,
-            bodyCodec=int(codec)
-        )
+        header = FrameHeader(msgType=MsgType.DATA, bodyCodec=int(codec))
         frame = Frame(header=header, payload=payload_bytes)
         response = self._client.request(frame)
         return response.payload
@@ -49,6 +47,7 @@ class XCPConnection:
     def close(self):
         """Close the connection."""
         self._client.close()
+
 
 def open(host: str = "127.0.0.1", port: int = 9944, timeout: float = 5.0) -> XCPConnection:
     """Legacy function to open a client connection.
@@ -63,6 +62,7 @@ def open(host: str = "127.0.0.1", port: int = 9944, timeout: float = 5.0) -> XCP
     """
     s = socket.create_connection((host, port), timeout=timeout)
     return XCPConnection(s)
+
 
 class EchoServer(threading.Thread):
     """Legacy echo server for backward compatibility."""
@@ -89,6 +89,7 @@ class EchoServer(threading.Thread):
         """Stop the server."""
         self._running.clear()
         self._server.stop()
+
 
 @contextmanager
 def run_echo_server(host: str = "127.0.0.1", port: int = 9944):

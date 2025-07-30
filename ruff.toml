@@ -2,6 +2,7 @@
 target-version = "py311"
 line-length = 120
 indent-width = 4
+extend-exclude = ["benchmarks"]
 
 [format]
 indent-style = "space"

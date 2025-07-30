@@ -1,0 +1,22 @@
+syntax = "proto3";
+package xcp.control;
+
+message Hello {
+  repeated uint16  codecs          = 1; // supported bodyCodec IDs
+  uint32           max_frame_bytes = 2;
+  repeated KindRange accepts       = 3; // inbound kinds
+  repeated KindRange emits         = 4; // outbound kinds
+  bool             shared_mem      = 5;
+}
+
+message KindRange {
+  uint32 kind_id    = 1;
+  uint16 major      = 2;
+  uint16 min_minor  = 3;
+  uint16 max_minor  = 4;
+}
+
+message Ack  { uint64 msg_id = 1; }
+message Nack { uint64 msg_id = 1; uint32 error_code = 2; uint32 retry_after_ms = 3; }
+message Ping { uint64 nonce  = 1; }
+message Pong { uint64 nonce  = 1; }

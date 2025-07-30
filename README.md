@@ -11,6 +11,7 @@ Licensed under CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/
 
 | Revision | Changes |
 | -------- | ------- |
+| [XCP 0.2](revisions/xcp-v0.2.md) | Revised protocol and codecx |
 | [XCP 0.1](revisions/xcp-v0.1.md) | Initial Draft |
 
 

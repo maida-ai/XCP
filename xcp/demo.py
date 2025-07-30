@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
+# type: ignore
 """Demo module for XCP functionality."""
 
+import json
 import threading
 import time
-import json
-from .server import Server
+
 from .client import Client
+from .constants import CodecID, MsgType
 from .frames import Frame, FrameHeader
-from .constants import MsgType, CodecID
+from .server import Server
+
 
 def run_demo():
     """Run a complete XCP demo."""
@@ -35,7 +38,7 @@ def run_demo():
                 bodyCodec=CodecID.JSON,
                 schemaId=0,
             ),
-            payload=b"Hello from XCP client!"
+            payload=b"Hello from XCP client!",
         )
         response = client.request(text_frame)
         print(f"Received: {response.payload.decode()}")
@@ -46,7 +49,7 @@ def run_demo():
             "type": "greeting",
             "message": "Hello from XCP!",
             "timestamp": time.time(),
-            "data": [1, 2, 3, 4, 5]
+            "data": [1, 2, 3, 4, 5],
         }
         json_frame = Frame(
             header=FrameHeader(
@@ -55,7 +58,7 @@ def run_demo():
                 bodyCodec=CodecID.JSON,
                 schemaId=0,
             ),
-            payload=json.dumps(json_data).encode()
+            payload=json.dumps(json_data).encode(),
         )
         response = client.request(json_frame)
         print(f"Received: {response.payload.decode()}")
@@ -70,7 +73,7 @@ def run_demo():
                 bodyCodec=CodecID.BINARY,
                 schemaId=0,
             ),
-            payload=binary_data
+            payload=binary_data,
         )
         response = client.request(binary_frame)
         print(f"Received binary data: {len(response.payload)} bytes")
@@ -83,9 +86,11 @@ def run_demo():
 
     print("\nDemo completed!")
 
+
 def main():
     """Main entry point for the demo."""
     run_demo()
+
 
 if __name__ == "__main__":
     main()

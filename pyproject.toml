@@ -13,15 +13,16 @@ dynamic = [
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
 build-backend = "poetry_dynamic_versioning.backend"
 
-[tool.setuptools.dynamic]
-version = {file=["version"]}
-
 [tool.poetry]
-package-mode = false
+package-mode = true
+packages = [{include = "xcp"}]
 version = "0.0.0"
 
 [tool.poetry.dependencies]
-# httpx = "^0.28.1"
+# Core XCP v0.2 dependencies
+protobuf = "^6.31.1"
+pydantic = "^2.10.0"
+google-crc32c = "^1.5.0"
 
 [tool.poetry.group.dev.dependencies]
 # Testing
@@ -40,8 +41,6 @@ h2 = "^4.2.0"
 tqdm = "^4.67.1"
 numpy = "^2.3.1"
 rich = "^14.0.0"
-protobuf = "^6.31.1"
-
 
 [project.scripts]
 xcp-demo = "xcp.demo:main"
@@ -63,3 +62,17 @@ extend-exclude = '''
   | dist
 )/
 '''
+
+[tool.poetry-dynamic-versioning]
+enable = true
+from-file = {source="version"}
+
+[tool.poetry-dynamic-versioning.substitution]
+files = ["*.py", "*/__init__.py", "*/__version__.py", "*/_version.py"]
+patterns = [
+    '''(^__version__\s*(?::.*?)?=\s*['"])[^'"]*(['"])''',
+    { value = '''(^__version_tuple__\s*(?::.*?)?=\s*\()[^)]*(\))''', mode = "tuple" },
+]
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }

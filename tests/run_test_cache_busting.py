@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+# type: ignore
 """Test script to verify cache-busting measures work correctly."""
 
+import threading
 import time
 import uuid
-from xcp import Client, Server, Frame, FrameHeader, MsgType, CodecID
-from xcp.frames import pack_frame, parse_frame
-import threading
+
+from xcp import Client, CodecID, Frame, FrameHeader, MsgType, Server
+
 
 def test_unique_payloads():
     """Test that unique payloads are generated correctly."""
@@ -15,7 +17,7 @@ def test_unique_payloads():
     payloads = []
     checksums = []
 
-    for i in range(10):
+    for _ in range(10):
         run_id = str(uuid.uuid4())
         payload, checksum = generate_unique_payload_with_checksum(1024, run_id)
         payloads.append(payload)
@@ -33,6 +35,7 @@ def test_unique_payloads():
 
     print("✅ All payloads and checksums are unique!")
     return True
+
 
 def test_cache_busting_client():
     """Test that cache-busting client generates unique message IDs."""
@@ -58,7 +61,7 @@ def test_cache_busting_client():
                     bodyCodec=CodecID.JSON,
                     schemaId=i,
                 ),
-                payload=f"test-{i}".encode()
+                payload=f"test-{i}".encode(),
             )
 
             # Send the frame and get the response
@@ -81,6 +84,7 @@ def test_cache_busting_client():
 
     finally:
         server.stop()
+
 
 def test_cache_busting_client_advanced():
     """Test that cache-busting client generates unique message IDs with microsecond precision."""
@@ -106,7 +110,7 @@ def test_cache_busting_client_advanced():
                     bodyCodec=CodecID.JSON,
                     schemaId=i,
                 ),
-                payload=f"test-{i}".encode()
+                payload=f"test-{i}".encode(),
             )
 
             # Send the frame and get the response
@@ -138,11 +142,10 @@ def test_cache_busting_client_advanced():
     finally:
         server.stop()
 
+
 def test_http_cache_busting():
     """Test HTTP cache-busting headers."""
     print("\nTesting HTTP cache-busting headers...")
-
-    import httpx
 
     # Create a simple test to verify headers are being sent
     headers = {
@@ -150,7 +153,7 @@ def test_http_cache_busting():
         "Pragma": "no-cache",
         "X-Benchmark-Run": "test",
         "X-Timestamp": str(time.time()),
-        "X-UUID": str(uuid.uuid4())
+        "X-UUID": str(uuid.uuid4()),
     }
 
     print("✅ HTTP cache-busting headers configured:")
@@ -158,6 +161,7 @@ def test_http_cache_busting():
         print(f"   {key}: {value}")
 
     return True
+
 
 def test_connection_uniqueness():
     """Test that each client connection has a unique connection ID."""
@@ -171,7 +175,7 @@ def test_connection_uniqueness():
 
     try:
         # Create multiple clients and verify they have different connection IDs
-        connection_ids = set()
+        # connection_ids = set()
 
         for i in range(5):
             client = Client("127.0.0.1", 9948, enable_cache_busting=True)
@@ -184,10 +188,10 @@ def test_connection_uniqueness():
                     bodyCodec=CodecID.JSON,
                     schemaId=i,
                 ),
-                payload=f"connection-test-{i}".encode()
+                payload=f"connection-test-{i}".encode(),
             )
 
-            response = client.request(frame)
+            client.request(frame)
             client.close()
 
             # The connection ID is internal, but we can verify unique behavior
@@ -200,16 +204,18 @@ def test_connection_uniqueness():
     finally:
         server.stop()
 
+
 def generate_unique_payload_with_checksum(size: int, run_id: str):
     """Generate a unique payload with checksum for each run to prevent caching."""
-    import os
     import hashlib
+    import os
 
     # Create a unique payload by combining random data with run_id
     base_payload = os.urandom(size - len(run_id))
     unique_payload = base_payload + run_id.encode()
     checksum = hashlib.sha256(unique_payload).hexdigest()
     return unique_payload, checksum
+
 
 def main():
     """Run all cache-busting tests."""
@@ -240,6 +246,7 @@ def main():
         print("🎉 All cache-busting tests passed!")
     else:
         print("⚠️  Some cache-busting tests failed!")
+
 
 if __name__ == "__main__":
     main()

@@ -1,73 +1,117 @@
-"""XCP frame structures and serialization."""
+"""XCP v0.2 frame structures and serialization."""
 
 import json
 import socket
 import struct
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
 
-from .constants import MAGIC, VERSION_BYTE, Flag, MsgType, CodecID
+from google_crc32c import Checksum
+
+from .constants import MAGIC, VERSION_BYTE, CodecID, Flag, MsgType
 
 # ----------------------------------------------------------------------------
 # Frame structures
 # ----------------------------------------------------------------------------
 
+
+@dataclass
+class SchemaKey:
+    """Schema key for identifying Ether schemas."""
+
+    ns_hash: int = 0
+    kind_id: int = 0
+    major: int = 0
+    minor: int = 0
+    hash128: bytes = b"\x00" * 16
+
+
+@dataclass
+class Tag:
+    """Free-form key/value tag."""
+
+    key: str
+    val: str
+
+
 @dataclass
 class FrameHeader:
-    """XCP frame header containing metadata about the frame."""
-    channelId: int = 0
-    msgType: int = MsgType.DATA
-    bodyCodec: int = CodecID.JSON
-    schemaId: int = 0
-    msgId: int = 0
-    inReplyTo: int = 0
-    tags: list = None
+    """XCP v0.2 frame header using JSON serialization."""
 
-    def __post_init__(self):
-        if self.tags is None:
-            self.tags = []
+    channel_id: int = 0
+    msg_type: int = MsgType.DATA
+    body_codec: int = CodecID.JSON
+    schema_key: SchemaKey = field(default_factory=SchemaKey)
+    msg_id: int = 0
+    in_reply_to: int = 0
+    tags: list[Tag] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
-        """Convert header to dictionary for JSON serialization."""
-        return {
-            "channelId": self.channelId,
-            "msgType": self.msgType,
-            "bodyCodec": self.bodyCodec,
-            "schemaId": self.schemaId,
-            "msgId": self.msgId,
-            "inReplyTo": self.inReplyTo,
-            "tags": self.tags
+    def to_bytes(self) -> bytes:
+        """Convert header to JSON bytes."""
+        data = {
+            "channelId": self.channel_id,
+            "msgType": self.msg_type,
+            "bodyCodec": self.body_codec,
+            "schemaKey": {
+                "nsHash": self.schema_key.ns_hash,
+                "kindId": self.schema_key.kind_id,
+                "major": self.schema_key.major,
+                "minor": self.schema_key.minor,
+                "hash128": self.schema_key.hash128.hex(),
+            },
+            "msgId": self.msg_id,
+            "inReplyTo": self.in_reply_to,
+            "tags": [{"key": tag.key, "val": tag.val} for tag in self.tags],
         }
+        return json.dumps(data, separators=(",", ":")).encode()
 
     @classmethod
-    def from_dict(cls, data: dict) -> "FrameHeader":
-        """Create header from dictionary."""
-        return cls(
-            channelId=data.get("channelId", 0),
-            msgType=data.get("msgType", MsgType.DATA),
-            bodyCodec=data.get("bodyCodec", CodecID.JSON),
-            schemaId=data.get("schemaId", 0),
-            msgId=data.get("msgId", 0),
-            inReplyTo=data.get("inReplyTo", 0),
-            tags=data.get("tags", [])
+    def from_bytes(cls, data: bytes) -> "FrameHeader":
+        """Create header from JSON bytes."""
+        decoded = json.loads(data.decode())
+
+        schema_data = decoded.get("schemaKey", {})
+        schema = SchemaKey(
+            ns_hash=schema_data.get("nsHash", 0),
+            kind_id=schema_data.get("kindId", 0),
+            major=schema_data.get("major", 0),
+            minor=schema_data.get("minor", 0),
+            hash128=bytes.fromhex(schema_data.get("hash128", "00" * 16)),
         )
+
+        tags = []
+        for tag_data in decoded.get("tags", []):
+            tags.append(Tag(key=tag_data["key"], val=tag_data["val"]))
+
+        return cls(
+            channel_id=decoded.get("channelId", 0),
+            msg_type=decoded.get("msgType", MsgType.DATA),
+            body_codec=decoded.get("bodyCodec", CodecID.JSON),
+            schema_key=schema,
+            msg_id=decoded.get("msgId", 0),
+            in_reply_to=decoded.get("inReplyTo", 0),
+            tags=tags,
+        )
+
 
 @dataclass
 class Frame:
-    """XCP frame containing header and payload."""
+    """XCP v0.2 frame containing header and payload."""
+
     header: FrameHeader
     payload: bytes
 
-    def __post_init__(self):
-        if isinstance(self.payload, str):
-            self.payload = self.payload.encode()
+    def __post_init__(self) -> None:
+        if isinstance(self.payload, str):  # type: ignore[unreachable]
+            self.payload = self.payload.encode()  # type: ignore[unreachable]
+
 
 # ----------------------------------------------------------------------------
 # Frame serialization/deserialization
 # ----------------------------------------------------------------------------
 
+
 def pack_frame(frame: Frame, flags: int = 0) -> bytes:
-    """Pack a Frame into the XCP binary format.
+    """Pack a Frame into the XCP v0.2 binary format.
 
     Args:
         frame: The frame to serialize
@@ -76,20 +120,30 @@ def pack_frame(frame: Frame, flags: int = 0) -> bytes:
     Returns:
         Binary representation of the frame
     """
-    header_dict = frame.header.to_dict()
-    header_bytes = json.dumps(header_dict, separators=(",", ":")).encode()
+    # Serialize header
+    header_bytes = frame.header.to_bytes()
     hlen = len(header_bytes)
 
-    # decide LARGE flag & PLEN field size
-    large = len(frame.payload) >= 2 ** 32
+    # Determine payload length and LARGE flag
+    payload_len = len(frame.payload)
+    large = payload_len >= 2**32
     if large:
         flags |= Flag.LARGE
-        plen_field = struct.pack("!Q", len(frame.payload))  # 8-byte
+        plen_field = struct.pack("<Q", payload_len)  # 8-byte, little-endian
     else:
-        plen_field = struct.pack("!I", len(frame.payload))
+        plen_field = struct.pack("<I", payload_len)  # 4-byte, little-endian
 
-    prefix = struct.pack("!I B B H", MAGIC, VERSION_BYTE, flags, hlen)
-    return prefix + header_bytes + plen_field + frame.payload
+    # Build frame prefix
+    prefix = struct.pack("<I B B H", MAGIC, VERSION_BYTE, flags, hlen)
+    frame_data = prefix + header_bytes + plen_field + frame.payload
+
+    # Add CRC32C footer
+    crc = Checksum()
+    crc.update(frame.payload)
+    crc_bytes = struct.pack("<I", int.from_bytes(crc.digest(), "little"))
+
+    return frame_data + crc_bytes
+
 
 def recv_exact(sock: socket.socket, n: int) -> bytes:
     """Receive exactly n bytes from socket.
@@ -112,8 +166,9 @@ def recv_exact(sock: socket.socket, n: int) -> bytes:
         buf.extend(chunk)
     return bytes(buf)
 
+
 def parse_frame(sock: socket.socket) -> Frame:
-    """Parse an XCP frame from socket.
+    """Parse an XCP v0.2 frame from socket.
 
     Args:
         sock: Socket to read from
@@ -125,24 +180,36 @@ def parse_frame(sock: socket.socket) -> Frame:
         ValueError: If frame format is invalid
         ConnectionError: If connection is closed unexpectedly
     """
-    # read first fixed 8 bytes
+    # Read first fixed 8 bytes (little-endian)
     pre = recv_exact(sock, 8)
-    magic, ver, flags, hlen = struct.unpack("!I B B H", pre)
+    magic, ver, flags, hlen = struct.unpack("<I B B H", pre)
     if magic != MAGIC:
         raise ValueError("Bad MAGIC header")
 
-    # read header
+    # Read header
     header_raw = recv_exact(sock, hlen)
-    header_dict = json.loads(header_raw.decode())
-    header = FrameHeader.from_dict(header_dict)
+    header = FrameHeader.from_bytes(header_raw)
 
-    # determine PLEN length
+    # Determine PLEN length
     if flags & Flag.LARGE:
         plen_bytes = recv_exact(sock, 8)
-        payload_len = struct.unpack("!Q", plen_bytes)[0]
+        payload_len = struct.unpack("<Q", plen_bytes)[0]
     else:
         plen_bytes = recv_exact(sock, 4)
-        payload_len = struct.unpack("!I", plen_bytes)[0]
+        payload_len = struct.unpack("<I", plen_bytes)[0]
 
+    # Read payload
     payload = recv_exact(sock, payload_len)
+
+    # Read and verify CRC32C
+    crc_bytes = recv_exact(sock, 4)
+    expected_crc = struct.unpack("<I", crc_bytes)[0]
+
+    crc = Checksum()
+    crc.update(payload)
+    actual_crc = int.from_bytes(crc.digest(), "little")
+
+    if actual_crc != expected_crc:
+        raise ValueError("CRC32C mismatch")
+
     return Frame(header=header, payload=payload)

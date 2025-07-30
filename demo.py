@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 # Copyright 2025 Maida.AI
 # SPDX-License-Identifier: Apache-2.0
+# type: ignore
 """Demo script showing XCP client-server communication."""
 
+import json
 import threading
 import time
-import json
-from xcp.server import Server
+
 from xcp.client import Client
+from xcp.constants import CodecID, MsgType
 from xcp.frames import Frame, FrameHeader
-from xcp.constants import MsgType, CodecID
+from xcp.server import Server
+
 
 def demo_server():
     """Run a simple XCP server that echoes messages."""
@@ -26,13 +29,14 @@ def demo_server():
                 msgType=frame.header.msgType,
                 bodyCodec=frame.header.bodyCodec,
                 schemaId=frame.header.schemaId,
-                inReplyTo=frame.header.msgId
+                inReplyTo=frame.header.msgId,
             )
             return Frame(header=response_header, payload=frame.payload)
         return None
 
     server = Server("127.0.0.1", 9944, on_frame=custom_handler)
     server.serve_forever()
+
 
 def demo_client():
     """Run a simple XCP client that sends messages."""
@@ -50,19 +54,14 @@ def demo_client():
             bodyCodec=CodecID.JSON,
             schemaId=0,
         ),
-        payload=b"Hello from XCP client!"
+        payload=b"Hello from XCP client!",
     )
     response = client.request(text_frame)
     print(f"Received: {response.payload.decode()}")
 
     # Send a JSON message
     print("Sending JSON message...")
-    json_data = {
-        "type": "greeting",
-        "message": "Hello from XCP!",
-        "timestamp": time.time(),
-        "data": [1, 2, 3, 4, 5]
-    }
+    json_data = {"type": "greeting", "message": "Hello from XCP!", "timestamp": time.time(), "data": [1, 2, 3, 4, 5]}
     json_frame = Frame(
         header=FrameHeader(
             channelId=0,
@@ -70,7 +69,7 @@ def demo_client():
             bodyCodec=CodecID.JSON,
             schemaId=0,
         ),
-        payload=json.dumps(json_data).encode()
+        payload=json.dumps(json_data).encode(),
     )
     response = client.request(json_frame)
     print(f"Received: {response.payload.decode()}")
@@ -85,13 +84,14 @@ def demo_client():
             bodyCodec=CodecID.BINARY,
             schemaId=0,
         ),
-        payload=binary_data
+        payload=binary_data,
     )
     response = client.request(binary_frame)
     print(f"Received binary data: {len(response.payload)} bytes")
 
     client.close()
     print("Client finished.")
+
 
 def main():
     """Run the demo."""
@@ -106,6 +106,7 @@ def main():
     demo_client()
 
     print("\nDemo completed!")
+
 
 if __name__ == "__main__":
     main()

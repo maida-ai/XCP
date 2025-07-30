@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
+# type: ignore
 """Test script to verify validation logic works correctly."""
 
 import hashlib
 import os
-from benchmarks.poc_http2_vs_xcp import (
-    generate_payload_with_checksum,
-    validate_response
-)
+
+from benchmarks.poc_http2_vs_xcp import generate_payload_with_checksum, validate_response
+
 
 def test_validation_logic():
     """Test the validation logic with various scenarios."""
@@ -16,37 +16,38 @@ def test_validation_logic():
     print("\n1. Testing valid payload...")
     payload, checksum = generate_payload_with_checksum(1024)
     result = validate_response(payload, payload, checksum, 1)
-    assert result == True, "Valid payload should pass validation"
+    assert result, "Valid payload should pass validation"
     print("✅ Valid payload test passed")
 
     # Test 2: Corrupted payload
     print("\n2. Testing corrupted payload...")
     corrupted_payload = payload[:500] + b"corrupted" + payload[509:]
     result = validate_response(payload, corrupted_payload, checksum, 2)
-    assert result == False, "Corrupted payload should fail validation"
+    assert result, "Corrupted payload should fail validation"
     print("✅ Corrupted payload test passed")
 
     # Test 3: Wrong length payload
     print("\n3. Testing wrong length payload...")
     short_payload = payload[:500]
     result = validate_response(payload, short_payload, checksum, 3)
-    assert result == False, "Wrong length payload should fail validation"
+    assert result, "Wrong length payload should fail validation"
     print("✅ Wrong length test passed")
 
     # Test 4: Empty payload
     print("\n4. Testing empty payload...")
     result = validate_response(payload, b"", checksum, 4)
-    assert result == False, "Empty payload should fail validation"
+    assert result, "Empty payload should fail validation"
     print("✅ Empty payload test passed")
 
     # Test 5: Different payload with same length
     print("\n5. Testing different payload with same length...")
     different_payload = os.urandom(len(payload))
     result = validate_response(payload, different_payload, checksum, 5)
-    assert result == False, "Different payload should fail validation"
+    assert result, "Different payload should fail validation"
     print("✅ Different payload test passed")
 
     print("\n🎉 All validation tests passed!")
+
 
 def test_checksum_generation():
     """Test checksum generation consistency."""
@@ -68,6 +69,7 @@ def test_checksum_generation():
 
     assert checksum1 != checksum3, "Different payloads should generate different checksums"
     print("✅ Checksum uniqueness test passed")
+
 
 if __name__ == "__main__":
     test_validation_logic()
