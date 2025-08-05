@@ -1,9 +1,9 @@
 """XCP v0.2 codec implementations."""
 
-from abc import ABC, abstractmethod
 from typing import Any
 
 from ..ether import Ether
+from .base import Codec
 
 # Import all codec implementations
 from .json_codec import JSONCodec
@@ -18,20 +18,6 @@ __all__ = [
     "get_codec",
     "list_codecs",
 ]
-
-
-class Codec(ABC):
-    """Base interface for XCP codecs."""
-
-    @abstractmethod
-    def encode(self, data: Any) -> bytes:
-        """Encode data to bytes."""
-        pass
-
-    @abstractmethod
-    def decode(self, data: bytes) -> Any:
-        """Decode bytes to data."""
-        pass
 
 
 # Codec registry

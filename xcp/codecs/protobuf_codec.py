@@ -3,7 +3,7 @@
 from typing import Any
 
 from ..ether import Attachment, Ether
-from . import Codec
+from .base import Codec
 
 
 class ProtobufCodec(Codec):

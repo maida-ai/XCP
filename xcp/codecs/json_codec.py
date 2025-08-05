@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 from ..ether import Ether
-from . import Codec
+from .base import Codec
 
 
 class JSONCodec(Codec):
